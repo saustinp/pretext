@@ -104,7 +104,7 @@ along with PreTeXt.  If not, see <http://www.gnu.org/licenses/>.
 
 <!-- No special wrapping needed for display  -->
 <!-- mathematics, so just copy the content   -->
-<xsl:template match="md[mrow]" mode="display-math-wrapper">
+<xsl:template match="md[mrow]|mds[mrow]" mode="display-math-wrapper">
     <xsl:param name="content" />
     <xsl:copy-of select="$content" />
 </xsl:template>
@@ -148,13 +148,13 @@ along with PreTeXt.  If not, see <http://www.gnu.org/licenses/>.
 <!-- Flag the context as "inline" v. "displaymath"     -->
 <!-- so that we can do things like place a CSS class   -->
 <!-- for MathJax to see when processing the math bits. -->
-<xsl:template match="m|md" mode="extraction">
+<xsl:template match="m|md|mds" mode="extraction">
     <xsl:variable name="context">
         <xsl:choose>
             <xsl:when test="self::m">
                 <xsl:text>inline</xsl:text>
             </xsl:when>
-            <xsl:when test="self::md">
+            <xsl:when test="self::md or self::mds">
                 <xsl:text>displaymath</xsl:text>
             </xsl:when>
         </xsl:choose>

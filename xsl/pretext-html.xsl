@@ -1618,7 +1618,7 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
 <!-- which is not a cross-reference target (it originates  -->
 <!-- in PG-code), and an error results when the heading in -->
 <!-- the knowl content tries to compute a number           -->
-<xsl:template match="fn|p|blockquote|biblio|biblio/note|interactive/instructions|gi|&DEFINITION-LIKE;|&OPENPROBLEM-LIKE;|&EXAMPLE-LIKE;|&PROJECT-LIKE;|task|&FIGURE-LIKE;|&THEOREM-LIKE;|&PROOF-LIKE;|case|&AXIOM-LIKE;|&REMARK-LIKE;|&COMPUTATION-LIKE;|&ASIDE-LIKE;|poem|assemblage|paragraphs|&GOAL-LIKE;|exercise|&SOLUTION-LIKE;|&DISCUSSION-LIKE;|exercisegroup|md[@pi:authored-one-line]|mrow|li[not(parent::var)]|contributor|fragment" mode="xref-as-knowl">
+<xsl:template match="fn|p|blockquote|biblio|biblio/note|interactive/instructions|gi|&DEFINITION-LIKE;|&OPENPROBLEM-LIKE;|&EXAMPLE-LIKE;|&PROJECT-LIKE;|task|&FIGURE-LIKE;|&THEOREM-LIKE;|&PROOF-LIKE;|case|&AXIOM-LIKE;|&REMARK-LIKE;|&COMPUTATION-LIKE;|&ASIDE-LIKE;|poem|assemblage|paragraphs|&GOAL-LIKE;|exercise|&SOLUTION-LIKE;|&DISCUSSION-LIKE;|exercisegroup|md[@pi:authored-one-line]|mds|mrow|li[not(parent::var)]|contributor|fragment" mode="xref-as-knowl">
     <xsl:param name="link" select="/.." />
     <xsl:choose>
         <xsl:when test="$b-skip-knowls or $html-xref-knowled = 'never' or $b-portable-html">
@@ -5425,6 +5425,60 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
     </xsl:if>
 </xsl:template>
 
+<!-- Subequations (mds): for HTML, the mds wrapper becomes a div. -->
+<!-- The simple case (mrow children) delegates to mode="body"     -->
+<!-- which is shared with md[mrow].  The intertext-exploded case  -->
+<!-- (md children) processes each fragment separately.             -->
+<xsl:template match="mds[mrow]">
+    <xsl:apply-templates select="." mode="body"/>
+</xsl:template>
+
+<xsl:template match="mds[md]">
+    <xsl:for-each select="md|pi:intertext">
+        <xsl:choose>
+            <xsl:when test="self::md">
+                <xsl:apply-templates select="." mode="body">
+                    <xsl:with-param name="b-needs-open"  select="not(@pi:location) or @pi:location = 'first'"/>
+                    <xsl:with-param name="b-needs-close" select="not(@pi:location) or @pi:location = 'last'"/>
+                    <xsl:with-param name="b-latex-intertext-needs-tags" select="@pi:latex-intertext-needs-tags = 'yes'"/>
+                </xsl:apply-templates>
+            </xsl:when>
+            <xsl:when test="self::pi:intertext">
+                <xsl:apply-templates select="."/>
+            </xsl:when>
+        </xsl:choose>
+    </xsl:for-each>
+</xsl:template>
+
+<xsl:template match="mds" mode="display-math-wrapper">
+    <xsl:param name="b-original" select="true()" />
+    <xsl:param name="content" />
+
+    <div class="displaymath process-math">
+        <xsl:apply-templates select="." mode="knowl-urls"/>
+        <xsl:if test="$b-original">
+            <xsl:apply-templates select="." mode="html-id-attribute"/>
+        </xsl:if>
+        <xsl:copy-of select="$content" />
+    </div>
+</xsl:template>
+
+<xsl:template match="mds" mode="knowl-urls">
+    <xsl:variable name="display-math-cross-references" select="..//xref"/>
+    <xsl:if test="$display-math-cross-references">
+        <xsl:attribute name="data-contains-math-knowls">
+            <xsl:for-each select="$display-math-cross-references">
+                <xsl:if test="position() != 1">
+                    <xsl:text> </xsl:text>
+                </xsl:if>
+                <xsl:apply-templates select="id(@ref)" mode="knowl-filename">
+                    <xsl:with-param name="origin" select="'xref'"/>
+                </xsl:apply-templates>
+            </xsl:for-each>
+        </xsl:attribute>
+    </xsl:if>
+</xsl:template>
+
 <!-- No "%" like on the LaTeX side -->
 <xsl:template name="display-math-visual-blank-line">
     <xsl:text>&#xa;</xsl:text>
@@ -5460,15 +5514,15 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
 <!-- but generally they do nothing                 -->
 
 <!-- always visible -->
-<xsl:template match="md[mrow]" mode="is-hidden">
+<xsl:template match="md[mrow]|mds" mode="is-hidden">
     <xsl:text>false</xsl:text>
 </xsl:template>
 
-<xsl:template match="md[mrow]" mode="body-element" />
-<xsl:template match="md[mrow]" mode="body-css-class" />
+<xsl:template match="md[mrow]|mds" mode="body-element" />
+<xsl:template match="md[mrow]|mds" mode="body-css-class" />
 
 <!-- No title; type and number obvious from content -->
-<xsl:template match="md[mrow]" mode="heading-xref-knowl" />
+<xsl:template match="md[mrow]|mds" mode="heading-xref-knowl" />
 
 <!-- Once upon a time, we broke up markup meant for MathJax that occured   -->
 <!-- outside of what we know is a mathematical context ("accidental        -->

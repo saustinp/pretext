@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+  <targets>
+    <target name="html">
+      <format>html</format>
+      <source>main.ptx</source>
+      <output-dir>output/html</output-dir>
+    </target>
+    <target name="latex">
+      <format>latex</format>
+      <source>main.ptx</source>
+      <output-dir>output/latex</output-dir>
+    </target>
+    <target name="pdf" pdf-method="xelatex">
+      <format>pdf</format>
+      <source>main.ptx</source>
+      <output-dir>output/pdf</output-dir>
+    </target>
+  </targets>
+</project>

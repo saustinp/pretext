@@ -99,6 +99,7 @@ along with PreTeXt.  If not, see <http://www.gnu.org/licenses/>.
     <!-- The second is for elements like "md" and "mdn"                             -->
     <localization string-id='equation'>Equation</localization>
     <localization string-id='displaymath'>Display Mathematics</localization>
+    <localization string-id='mds'>Equations</localization>
     <!-- Types of documents, mostly for informational messages -->
     <localization string-id='volume'>Volume</localization>
     <localization string-id='book'>Book</localization>

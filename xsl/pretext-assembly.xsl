@@ -2012,6 +2012,18 @@ along with PreTeXt.  If not, see <http://www.gnu.org/licenses/>.
 <!-- deprecation) and suggest the "md" replacement.            -->
 <xsl:template match="mdn[not(mrow)]" mode="repair"/>
 
+<!-- "mds" (subequations) retains its element name through repair.   -->
+<!-- Unlike me/men/mdn which normalize to "md", the "mds" wrapper    -->
+<!-- carries semantic meaning: it groups equations under a shared     -->
+<!-- parent number (like LaTeX's \begin{subequations}).               -->
+<!-- All child mrows are forcibly numbered.                           -->
+<xsl:template match="mds[mrow]" mode="repair">
+    <xsl:copy>
+        <xsl:apply-templates select="@*" mode="repair"/>
+        <xsl:apply-templates select="node()" mode="repair"/>
+    </xsl:copy>
+</xsl:template>
+
 <!-- Replace bare "md" by "md" with one "mrow"          -->
 <!--   - @xml:id will live on the "md" (new)            -->
 <!--   - md/@number  respected first                    -->
@@ -2099,6 +2111,27 @@ along with PreTeXt.  If not, see <http://www.gnu.org/licenses/>.
                 <!-- the default default is to not number equations -->
                 <xsl:otherwise>
                     <xsl:text>no</xsl:text>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:attribute>
+        <xsl:apply-templates select="node()" mode="repair"/>
+    </xsl:copy>
+</xsl:template>
+
+<!-- mrow inside "mds" (subequations) are always numbered.    -->
+<!-- That is the whole point of subequations: every row gets   -->
+<!-- a sub-letter (a, b, c, ...).  A @tag attribute on a row   -->
+<!-- still overrides with a custom symbol.                     -->
+<xsl:template match="mds/mrow" mode="repair">
+    <xsl:copy>
+        <xsl:apply-templates select="@*" mode="repair"/>
+        <xsl:attribute name="pi:numbered">
+            <xsl:choose>
+                <xsl:when test="@tag">
+                    <xsl:text>no</xsl:text>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:text>yes</xsl:text>
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:attribute>
@@ -2223,6 +2256,90 @@ along with PreTeXt.  If not, see <http://www.gnu.org/licenses/>.
                 </xsl:apply-templates>
             </xsl:when>
             <!-- orioginal  $nodes  ensures we never get here -->
+            <xsl:otherwise/>
+        </xsl:choose>
+    </xsl:if>
+</xsl:template>
+
+
+<!-- Subequations with "intertext"                              -->
+<!-- We explode into "md" fragments *within* the "mds" wrapper  -->
+<!-- so the subequation grouping and numbering are preserved.    -->
+<!-- The inner "md" fragments carry @pi:location for LaTeX       -->
+<!-- reconstruction, exactly as the regular md[intertext] does.  -->
+
+<xsl:template match="mds[intertext]" mode="repair">
+    <xsl:variable name="trial-mrow-rtf">
+        <xsl:apply-templates select="mrow" mode="repair"/>
+    </xsl:variable>
+    <xsl:variable name="trial-mrow" select="exsl:node-set($trial-mrow-rtf)"/>
+    <!-- subequations always have tags (every row is numbered) -->
+    <xsl:variable name="b-needs-tags" select="true()"/>
+
+    <xsl:copy>
+        <xsl:apply-templates select="@*" mode="repair"/>
+        <xsl:apply-templates select="." mode="mds-intertext-exploder">
+            <xsl:with-param name="nodes" select="mrow|intertext"/>
+            <xsl:with-param name="location" select="'first'"/>
+            <xsl:with-param name="b-needs-tags" select="$b-needs-tags"/>
+        </xsl:apply-templates>
+    </xsl:copy>
+</xsl:template>
+
+<!-- Recursive exploder for mds[intertext].  Identical logic to    -->
+<!-- the md[intertext] exploder, but produces md fragments INSIDE   -->
+<!-- the mds wrapper rather than as top-level siblings.             -->
+<xsl:template match="mds" mode="mds-intertext-exploder">
+    <xsl:param name="nodes"/>
+    <xsl:param name="location"/>
+    <xsl:param name="b-needs-tags"/>
+
+    <xsl:if test="$nodes">
+        <xsl:variable name="lead-node" select="$nodes[1]"/>
+        <xsl:choose>
+            <xsl:when test="$lead-node[self::mrow]">
+                <xsl:variable name="break" select="$lead-node/following-sibling::intertext[1]"/>
+                <xsl:variable name="md-block" select="$lead-node |
+                    $lead-node/following-sibling::mrow[not($break) or (following-sibling::intertext[1] = $break)]"/>
+                <md pi:location="{$location}">
+                    <xsl:attribute name="pi:latex-intertext-needs-tags">
+                        <xsl:choose>
+                            <xsl:when test="$b-needs-tags">
+                                <xsl:text>yes</xsl:text>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>no</xsl:text>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:attribute>
+                    <xsl:apply-templates select="$md-block" mode="repair"/>
+                </md>
+                <xsl:variable name="next-location">
+                    <xsl:choose>
+                        <xsl:when test="not($break/following-sibling::intertext)">
+                            <xsl:text>last</xsl:text>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>intermediate</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:apply-templates select="." mode="mds-intertext-exploder">
+                    <xsl:with-param name="nodes" select="$md-block[last()]/following-sibling::*"/>
+                    <xsl:with-param name="location" select="$next-location"/>
+                    <xsl:with-param name="b-needs-tags" select="$b-needs-tags"/>
+                </xsl:apply-templates>
+            </xsl:when>
+            <xsl:when test="$lead-node[self::intertext]">
+                <pi:intertext>
+                    <xsl:apply-templates select="$lead-node/node()" mode="repair"/>
+                </pi:intertext>
+                <xsl:apply-templates select="." mode="mds-intertext-exploder">
+                    <xsl:with-param name="nodes" select="$lead-node/following-sibling::*"/>
+                    <xsl:with-param name="location" select="$location"/>
+                    <xsl:with-param name="b-needs-tags" select="$b-needs-tags"/>
+                </xsl:apply-templates>
+            </xsl:when>
             <xsl:otherwise/>
         </xsl:choose>
     </xsl:if>

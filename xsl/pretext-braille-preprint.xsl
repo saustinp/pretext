@@ -102,7 +102,7 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
 <!-- *are* present in "math-original" but that introduces a new  -->
 <!-- element in-between "md" and "mrow", so matches on           -->
 <!-- "md[mrow]" can be problematic here (and perhaps elsewhere). -->
-<xsl:template match="m|md" mode="meld-math">
+<xsl:template match="m|md|mds" mode="meld-math">
     <!-- preserve author's element -->
     <xsl:copy>
         <!-- preserve attributes -->
@@ -1614,7 +1614,7 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
     </xsl:choose>
 </xsl:template>
 
-<xsl:template match="m[contains(math-nemeth, '&#xa;')]|md">
+<xsl:template match="m[contains(math-nemeth, '&#xa;')]|md|mds">
     <xsl:variable name="nemeth">
         <xsl:value-of select="math-nemeth"/>
         <xsl:text>&#xa;</xsl:text>

@@ -1338,7 +1338,7 @@
 <!-- #### -->
 
 <!-- Pluck SVGs from the file full of them, with matching IDs -->
-<xsl:template match="m|md[mrow]">
+<xsl:template match="m|md[mrow]|mds">
     <!-- NB: math-representation file writes with "visible-id" -->
     <xsl:variable name="id">
         <xsl:apply-templates select="." mode="unique-id"/>

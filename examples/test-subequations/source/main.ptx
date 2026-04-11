@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<pretext xmlns:xi="http://www.w3.org/2001/XInclude">
+  <docinfo>
+    <numbering>
+      <equations level="1"/>
+    </numbering>
+  </docinfo>
+
+  <article xml:id="test-subequations">
+    <title>Test: Subequations (mds)</title>
+
+    <section xml:id="sec-basic">
+      <title>Basic Subequations</title>
+
+      <p>A regular numbered equation before the subequation block:</p>
+      <men xml:id="eq-before">
+        E = mc^2
+      </men>
+
+      <p>Now a block of subequations (Maxwell's equations):</p>
+      <mds xml:id="eq-maxwell">
+        <mrow xml:id="eq-gauss-e">\nabla \cdot \mathbf{E} \amp= \frac{\rho}{\epsilon_0}</mrow>
+        <mrow xml:id="eq-gauss-m">\nabla \cdot \mathbf{B} \amp= 0</mrow>
+        <mrow xml:id="eq-faraday">\nabla \times \mathbf{E} \amp= -\frac{\partial \mathbf{B}}{\partial t}</mrow>
+        <mrow xml:id="eq-ampere">\nabla \times \mathbf{B} \amp= \mu_0 \mathbf{J} + \mu_0 \epsilon_0 \frac{\partial \mathbf{E}}{\partial t}</mrow>
+      </mds>
+
+      <p>And a regular equation after:</p>
+      <men xml:id="eq-after">
+        F = ma
+      </men>
+
+      <p>Cross-reference tests:
+        The full group is <xref ref="eq-maxwell"/>.
+        Gauss's law for electricity is <xref ref="eq-gauss-e"/>.
+        Faraday's law is <xref ref="eq-faraday"/>.
+        The equation before is <xref ref="eq-before"/>
+        and the one after is <xref ref="eq-after"/>.
+      </p>
+
+    </section>
+
+    <section xml:id="sec-second-block">
+      <title>Multiple Blocks and Gather</title>
+
+      <p>A second subequation block using gather alignment (no ampersands):</p>
+      <mds xml:id="eq-kinematics" alignment="gather">
+        <mrow xml:id="eq-vel">v = v_0 + at</mrow>
+        <mrow xml:id="eq-pos">x = x_0 + v_0 t + \tfrac{1}{2}at^2</mrow>
+        <mrow xml:id="eq-vsq">v^2 = v_0^2 + 2a(x - x_0)</mrow>
+      </mds>
+
+      <p>Reference to position equation: <xref ref="eq-pos"/>.</p>
+
+    </section>
+
+  </article>
+</pretext>

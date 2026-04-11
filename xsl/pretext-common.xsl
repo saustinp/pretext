@@ -894,7 +894,7 @@ Book (with parts), "section" at level 3
 <!-- All displayed mathematics gets wrapped by  -->
 <!-- an abstract template, a necessity for HTML -->
 <!-- output.  By default, just a copy machine.  -->
-<xsl:template match="md[mrow]" mode="display-math-wrapper">
+<xsl:template match="md[mrow]|mds[mrow]" mode="display-math-wrapper">
     <xsl:param name="content" />
     <xsl:value-of select="$content" />
 </xsl:template>
@@ -902,7 +902,7 @@ Book (with parts), "section" at level 3
 <!-- The HTML conversion accomodates duplicated content (i.e. knowls) -->
 <!-- with an elaborate scheme.  The mode="body" template is central,  -->
 <!-- so we run with that here.                                        -->
-<xsl:template match="md[mrow]" mode="body">
+<xsl:template match="md[mrow]|mds[mrow]" mode="body">
     <!-- block-type parameter is ignored, since the          -->
     <!-- representation never varies, no heading, no wrapper -->
     <xsl:param name="block-type" />
@@ -1169,7 +1169,7 @@ Book (with parts), "section" at level 3
 <!-- versions, except when we flag tags as needed inside an "md"  -->
 <!-- Template is applied twice (begin/end) and its use ensures    -->
 <!-- consistency.                                                 -->
-<xsl:template match="md[mrow]" mode="displaymath-alignment">
+<xsl:template match="md[mrow]|mds[mrow]" mode="displaymath-alignment">
     <xsl:param name="b-needs-tags" select="true()" />
     <xsl:choose>
         <!-- look for @alignment override, possibly bad -->
@@ -1211,9 +1211,9 @@ Book (with parts), "section" at level 3
 <!-- With alignment="alignat" we need the number of columns     -->
 <!-- as an argument, complete with the LaTeX group (braces)     -->
 <!-- Mostly we call this regularly, and it usually does nothing -->
-<xsl:template match="md[mrow]" mode="alignat-columns" />
+<xsl:template match="md[mrow]|mds[mrow]" mode="alignat-columns" />
 
-<xsl:template match="md[mrow and (@alignment='alignat')]" mode="alignat-columns">
+<xsl:template match="md[mrow and (@alignment='alignat')]|mds[mrow and (@alignment='alignat')]" mode="alignat-columns">
     <xsl:variable name="number-equation-columns">
         <xsl:choose>
             <!-- override first -->
@@ -1839,8 +1839,8 @@ Book (with parts), "section" at level 3
 
 <!-- Sometimes we just need the mark itself (e.g. braille).  Note -->
 <!-- that the "mark" could well be plural, but usuually is not.   -->
-<xsl:template match="m|md" mode="get-clause-punctuation-mark">
-    <xsl:if test="(self::m and $b-include-inline) or (self::md and $b-include-display)">
+<xsl:template match="m|md|mds" mode="get-clause-punctuation-mark">
+    <xsl:if test="(self::m and $b-include-inline) or ((self::md or self::mds) and $b-include-display)">
         <xsl:variable name="trailing-text" select="following-sibling::node()[1]/self::text()" />
         <xsl:call-template name="leading-clause-punctuation">
             <xsl:with-param name="text" select="$trailing-text" />
@@ -1852,8 +1852,8 @@ Book (with parts), "section" at level 3
 <!-- inside LaTeX rendering.                                -->
 <!-- NB: this mode name is not great, but we leave it as-is -->
 <!-- from a refactor. A cosmetic refactor could improve it. -->
-<xsl:template match="m|md" mode="get-clause-punctuation">
-    <xsl:if test="(self::m and $b-include-inline) or (self::md and $b-include-display)">
+<xsl:template match="m|md|mds" mode="get-clause-punctuation">
+    <xsl:if test="(self::m and $b-include-inline) or ((self::md or self::mds) and $b-include-display)">
         <xsl:variable name="punctuation">
             <xsl:apply-templates select="." mode="get-clause-punctuation-mark"/>
         </xsl:variable>
@@ -3238,6 +3238,11 @@ Book (with parts), "section" at level 3
     <xsl:text>displaymath</xsl:text>
 </xsl:template>
 
+<!-- Subequations: use "Equations" as the type name -->
+<xsl:template match="mds" mode="string-id">
+    <xsl:text>mds</xsl:text>
+</xsl:template>
+
 <!-- And with no better match, the default is  -->
 <!-- the PreTeXt name for the element itself. -->
 <xsl:template match="*" mode="string-id">
@@ -4258,6 +4263,12 @@ Book (with parts), "section" at level 3
 <!-- and every displayed equation is eventually held in an  -->
 <!-- "mrow", so counting is straightforward.  Presence of a -->
 <!-- local tag (@tag) is considered to be unnumbered.       -->
+<!--                                                        -->
+<!-- NB: mrow inside "mds" (subequations) do NOT participate -->
+<!-- in the global equation counter.  An "mds" consumes one  -->
+<!-- slot and its child mrows get sub-letters (a, b, c).     -->
+<!-- The count expression excludes mrow inside mds and adds  -->
+<!-- mds itself as a single counted item.                    -->
 <xsl:template match="mrow[@pi:numbered = 'yes']" mode="serial-number">
     <xsl:variable name="subtree-level">
         <xsl:apply-templates select="." mode="absolute-subtree-level">
@@ -4266,22 +4277,22 @@ Book (with parts), "section" at level 3
     </xsl:variable>
     <xsl:choose>
         <xsl:when test="$subtree-level=-1">
-            <xsl:number from="book|article|letter|memo" level="any" count="mrow[@pi:numbered = 'yes']"/>
+            <xsl:number from="book|article|letter|memo" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
         </xsl:when>
         <xsl:when test="$subtree-level=0">
-            <xsl:number from="part" level="any" count="mrow[@pi:numbered = 'yes']"/>
+            <xsl:number from="part" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
             </xsl:when>
         <xsl:when test="$subtree-level=1">
-            <xsl:number from="chapter|book/backmatter/appendix" level="any" count="mrow[@pi:numbered = 'yes']"/>
+            <xsl:number from="chapter|book/backmatter/appendix" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
         </xsl:when>
         <xsl:when test="$subtree-level=2">
-            <xsl:number from="section|article/backmatter/appendix|chapter/exercises|chapter/worksheet|chapter/handout|chapter/reading-questions" level="any" count="mrow[@pi:numbered = 'yes']"/>
+            <xsl:number from="section|article/backmatter/appendix|chapter/exercises|chapter/worksheet|chapter/handout|chapter/reading-questions" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
         </xsl:when>
         <xsl:when test="$subtree-level=3">
-            <xsl:number from="subsection|section/exercises|section/worksheet|section/handout|section/reading-questions" level="any" count="mrow[@pi:numbered = 'yes']"/>
+            <xsl:number from="subsection|section/exercises|section/worksheet|section/handout|section/reading-questions" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
         </xsl:when>
         <xsl:when test="$subtree-level=4">
-            <xsl:number from="subsubsection|subsection/exercises|subsection/worksheet|subsection/handout|subsection/reading-questions" level="any" count="mrow[@pi:numbered = 'yes']"/>
+            <xsl:number from="subsubsection|subsection/exercises|subsection/worksheet|subsection/handout|subsection/reading-questions" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
         </xsl:when>
         <xsl:otherwise>
             <xsl:message>PTX:ERROR: Subtree level for equation number computation is out-of-bounds (<xsl:value-of select="$subtree-level" />)</xsl:message>
@@ -4295,6 +4306,51 @@ Book (with parts), "section" at level 3
 <!-- string, depending on how the "md" was meant to be numbered.                 -->
 <xsl:template match="md[@pi:authored-one-line]" mode="serial-number">
     <xsl:apply-templates select="mrow" mode="serial-number"/>
+</xsl:template>
+
+<!-- Serial Numbers: Subequations (mds) -->
+<!-- An "mds" block consumes exactly one slot in the equation counter. -->
+<!-- The count expression is identical to the regular mrow template    -->
+<!-- above: non-mds mrows plus mds blocks, counted at the same level. -->
+<xsl:template match="mds" mode="serial-number">
+    <xsl:variable name="subtree-level">
+        <xsl:apply-templates select="." mode="absolute-subtree-level">
+            <xsl:with-param name="numbering-items" select="$numbering-equations" />
+        </xsl:apply-templates>
+    </xsl:variable>
+    <xsl:choose>
+        <xsl:when test="$subtree-level=-1">
+            <xsl:number from="book|article|letter|memo" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
+        </xsl:when>
+        <xsl:when test="$subtree-level=0">
+            <xsl:number from="part" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
+        </xsl:when>
+        <xsl:when test="$subtree-level=1">
+            <xsl:number from="chapter|book/backmatter/appendix" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
+        </xsl:when>
+        <xsl:when test="$subtree-level=2">
+            <xsl:number from="section|article/backmatter/appendix|chapter/exercises|chapter/worksheet|chapter/handout|chapter/reading-questions" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
+        </xsl:when>
+        <xsl:when test="$subtree-level=3">
+            <xsl:number from="subsection|section/exercises|section/worksheet|section/handout|section/reading-questions" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
+        </xsl:when>
+        <xsl:when test="$subtree-level=4">
+            <xsl:number from="subsubsection|subsection/exercises|subsection/worksheet|subsection/handout|subsection/reading-questions" level="any" count="mrow[@pi:numbered = 'yes' and not(ancestor::mds)] | mds"/>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:message>PTX:ERROR: Subtree level for subequation number computation is out-of-bounds (<xsl:value-of select="$subtree-level" />)</xsl:message>
+        </xsl:otherwise>
+    </xsl:choose>
+</xsl:template>
+
+<!-- Serial Numbers: Subequation rows (mds//mrow) -->
+<!-- Each numbered mrow inside an "mds" gets a letter suffix (a, b, c, ...). -->
+<!-- We count across all mrow within the mds, including across intertext-    -->
+<!-- exploded md fragments, using level="any" from="mds".                    -->
+<!-- This template is more specific than the generic mrow[@pi:numbered]      -->
+<!-- template above, so XSLT priority rules ensure it matches first.         -->
+<xsl:template match="mds//mrow[@pi:numbered = 'yes']" mode="serial-number">
+    <xsl:number format="a" count="mrow[@pi:numbered = 'yes']" level="any" from="mds"/>
 </xsl:template>
 
 <!-- Serial Numbers: Exercises in Exercises or Worksheet or Reading Question Divisions -->
@@ -4725,6 +4781,28 @@ Book (with parts), "section" at level 3
     </xsl:call-template>
 </xsl:template>
 
+<!-- Structure Numbers: Subequations (mds) -->
+<!-- The "mds" block itself gets its structure number from the  -->
+<!-- enclosing division, exactly like a regular equation.        -->
+<xsl:template match="mds" mode="structure-number">
+    <xsl:call-template name="block-structure-number">
+        <xsl:with-param name="levels" select="$numbering-equations"/>
+    </xsl:call-template>
+</xsl:template>
+
+<!-- Structure Numbers: Subequation rows -->
+<!-- Following the subfigure pattern: the structure number of a  -->
+<!-- sub-equation row is the FULL number of its parent "mds".    -->
+<!-- This parallels figure/sidebyside/figure above.              -->
+<!-- We use descendant-axis "mds//mrow" rather than the direct  -->
+<!-- "mds/mrow | mds/md/mrow" pattern, so that this template     -->
+<!-- still matches even when an intermediate wrapper element     -->
+<!-- (e.g., the "math-original" inserted by the braille          -->
+<!-- meld-math step) sits between the mds and its mrows.         -->
+<xsl:template match="mds//mrow" mode="structure-number">
+    <xsl:apply-templates select="ancestor::mds" mode="number"/>
+</xsl:template>
+
 <!-- Structure Numbers: Inline Exercises -->
 <!-- Follows the theorem/figure/etc scheme (can't poll parent) -->
 <xsl:template match="exercise[boolean(&INLINE-EXERCISE-FILTER;)]" mode="structure-number">
@@ -4879,6 +4957,10 @@ Book (with parts), "section" at level 3
                     <!-- number already carries its own delimiter    -->
                     <!-- and no period separator is needed.          -->
                     <xsl:when test="(&FIGURE-FILTER;) and (parent::sidebyside/parent::figure or parent::sidebyside/parent::sbsgroup/parent::figure)"/>
+                    <!-- A sub-equation row inside "mds" gets a bare   -->
+                    <!-- letter suffix (e.g., "3a" not "3.a"),         -->
+                    <!-- paralleling the subfigure convention above.   -->
+                    <xsl:when test="self::mrow and ancestor::mds"/>
                     <xsl:otherwise>
                         <xsl:text>.</xsl:text>
                     </xsl:otherwise>
@@ -9207,7 +9289,7 @@ Book (with parts), "section" at level 3
 <!-- to a one-line "md" but the target is found in the     -->
 <!-- original source and is identified as an "men" element, -->
 <!-- which really *should not* be not on this list.         -->
-<xsl:template match="&STRUCTURAL;|&DEFINITION-LIKE;|&THEOREM-LIKE;|&PROOF-LIKE;|&AXIOM-LIKE;|&REMARK-LIKE;|&COMPUTATION-LIKE;|&ASIDE-LIKE;|&OPENPROBLEM-LIKE;|&EXAMPLE-LIKE;|&PROJECT-LIKE;|&GOAL-LIKE;|&FIGURE-LIKE;|&SOLUTION-LIKE;|&DISCUSSION-LIKE;|exercise|task|subexercises|exercisegroup|poem|assemblage|paragraphs|li|fn|men|md|mrow|biblio|interactive/instructions|case|contributor|gi" mode="is-xref-target">
+<xsl:template match="&STRUCTURAL;|&DEFINITION-LIKE;|&THEOREM-LIKE;|&PROOF-LIKE;|&AXIOM-LIKE;|&REMARK-LIKE;|&COMPUTATION-LIKE;|&ASIDE-LIKE;|&OPENPROBLEM-LIKE;|&EXAMPLE-LIKE;|&PROJECT-LIKE;|&GOAL-LIKE;|&FIGURE-LIKE;|&SOLUTION-LIKE;|&DISCUSSION-LIKE;|exercise|task|subexercises|exercisegroup|poem|assemblage|paragraphs|li|fn|men|md|mds|mrow|biblio|interactive/instructions|case|contributor|gi" mode="is-xref-target">
     <xsl:value-of select="'yes'"/>
 </xsl:template>
 

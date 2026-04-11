@@ -7437,6 +7437,44 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
     </xsl:apply-templates>
 </xsl:template>
 
+<!-- Subequations: wrap inner content in LaTeX's subequations    -->
+<!-- environment.  LaTeX handles the parent-number + sub-letter   -->
+<!-- numbering natively, so \label{} on mds gives the group       -->
+<!-- number and \label{} on individual mrow gives the sub-number. -->
+<xsl:template match="mds">
+    <xsl:call-template name="display-math-visual-blank-line" />
+    <xsl:text>\begin{subequations}</xsl:text>
+    <xsl:apply-templates select="." mode="label"/>
+    <xsl:text>&#xa;</xsl:text>
+    <xsl:choose>
+        <!-- intertext-exploded case: mds contains md children -->
+        <xsl:when test="md">
+            <xsl:for-each select="md|pi:intertext">
+                <xsl:choose>
+                    <xsl:when test="self::md">
+                        <xsl:apply-templates select="." mode="body">
+                            <xsl:with-param name="b-needs-open"  select="not(@pi:location) or @pi:location = 'first'"/>
+                            <xsl:with-param name="b-needs-close" select="not(@pi:location) or @pi:location = 'last'"/>
+                            <xsl:with-param name="b-latex-intertext-needs-tags" select="@pi:latex-intertext-needs-tags = 'yes'"/>
+                        </xsl:apply-templates>
+                    </xsl:when>
+                    <xsl:when test="self::pi:intertext">
+                        <xsl:apply-templates select="."/>
+                    </xsl:when>
+                </xsl:choose>
+            </xsl:for-each>
+        </xsl:when>
+        <!-- simple case: mds contains mrow children directly -->
+        <xsl:otherwise>
+            <xsl:apply-templates select="." mode="body">
+                <xsl:with-param name="b-needs-open" select="true()"/>
+                <xsl:with-param name="b-needs-close" select="true()"/>
+            </xsl:apply-templates>
+        </xsl:otherwise>
+    </xsl:choose>
+    <xsl:text>\end{subequations}&#xa;</xsl:text>
+</xsl:template>
+
 <xsl:template match="mrow" mode="tag">
     <xsl:apply-templates select="." mode="label" />
 </xsl:template>
@@ -7466,7 +7504,7 @@ along with MathBook XML.  If not, see <http://www.gnu.org/licenses/>.
 <!-- no-op for the base version, where it is irrelevant -->
 
 <xsl:template match="mrow" mode="display-page-break">
-    <xsl:if test="parent::md/@break='no' and not(@break='yes')">
+    <xsl:if test="(parent::md/@break='no' or parent::mds/@break='no') and not(@break='yes')">
         <xsl:text>*</xsl:text>
     </xsl:if>
 </xsl:template>
